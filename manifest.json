@@ -1,16 +1,16 @@
 {
   "manifest_version": 3,
-  "name": "Quick Tasks",
+  "name": "Status Bar: Relógios & Pomodoro",
   "version": "1.0.0",
-  "description": "Lista de tarefas rápidas direto na barra do Chrome.",
+  "description": "Barra fixa no canto inferior direito com dois relógios de fuso horário e um cronômetro Pomodoro (25min foco / 5min pausa).",
   "action": {
-    "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
-    }
+    },
+    "default_title": "Mostrar/ocultar barra de status"
   },
   "icons": {
     "16": "icons/icon16.png",
@@ -21,5 +21,13 @@
   "background": {
     "service_worker": "background.js"
   },
-  "permissions": ["storage"]
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "permissions": ["storage", "alarms", "notifications"]
 }
