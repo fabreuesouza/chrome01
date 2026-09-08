@@ -8,6 +8,8 @@ no canto inferior direito de qualquer página, com:
   sincronizado entre todas as abas abertas.
 - **Idioma** da interface configurável (English / Portuguese (Brazil)),
   com **inglês como padrão**.
+- **Aparência** configurável: cor de fundo (qualquer cor), 6 níveis de
+  transparência (0/20/40/60/80/100%) e cor da fonte (branco ou preto).
 
 A barra usa `position: fixed`, então permanece no canto inferior direito
 mesmo com o scroll da página.
@@ -53,3 +55,16 @@ Clique no seletor de idioma (mostra "EN" ou "PT-BR") para escolher entre
 **English** (padrão) e **Portuguese (Brazil)**. A escolha é salva e afeta
 todos os textos da barra (rótulos, placeholders, notificações do Pomodoro)
 em todas as abas.
+
+## Aparência
+
+Clique no ícone de controles deslizantes (⚙) para abrir o painel de
+aparência:
+
+- **Cor da barra** — qualquer cor, via seletor nativo do navegador.
+- **Transparência** — 6 níveis fixos (0%, 20%, 40%, 60%, 80%, 100%).
+- **Cor da fonte** — branco ou preto, para manter contraste com a cor
+  escolhida.
+
+Tudo é salvo em `chrome.storage.local` e aplicado instantaneamente em
+todas as abas abertas.

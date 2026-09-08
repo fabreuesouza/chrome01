@@ -22,6 +22,9 @@ const DEFAULT_STATE = {
   lang: "en",
   tz1: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
   tz2: "UTC",
+  barColor: "#3c3c3c",
+  barOpacity: 100,
+  fontColor: "white",
   pomodoro: {
     mode: "work", // "work" | "break"
     running: false,

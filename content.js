@@ -67,6 +67,7 @@
   }
 
   const WORK_MS = 25 * 60 * 1000;
+  const OPACITY_LEVELS = [0, 20, 40, 60, 80, 100];
 
   const LANGUAGES = [
     { code: "en", nameKey: "langEnglish" },
@@ -86,6 +87,12 @@
       languageLabel: "Language",
       langEnglish: "English",
       langPortugueseBR: "Portuguese (Brazil)",
+      settingsLabel: "Appearance",
+      barColorLabel: "Bar color",
+      transparencyLabel: "Transparency",
+      textColorLabel: "Text color",
+      fontWhite: "White",
+      fontBlack: "Black",
     },
     "pt-BR": {
       timezoneLabel: "Fuso horário",
@@ -99,6 +106,12 @@
       languageLabel: "Idioma",
       langEnglish: "Inglês",
       langPortugueseBR: "Português (Brasil)",
+      settingsLabel: "Aparência",
+      barColorLabel: "Cor da barra",
+      transparencyLabel: "Transparência",
+      textColorLabel: "Cor da fonte",
+      fontWhite: "Branco",
+      fontBlack: "Preto",
     },
   };
 
@@ -111,6 +124,9 @@
     lang: "en",
     tz1: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
     tz2: "UTC",
+    barColor: "#3c3c3c",
+    barOpacity: 100,
+    fontColor: "white",
     pomodoro: { mode: "work", running: false, endAt: null, remainingMs: WORK_MS },
   };
 
@@ -150,13 +166,13 @@
       align-items: center;
       gap: 6px;
       padding: 5px 10px;
-      border-right: 1px solid #545454;
+      border-right: 1px solid rgba(128, 128, 128, 0.4);
       white-space: nowrap;
       position: relative;
     }
     .segment:last-child { border-right: none; }
     .clock-label {
-      color: #a8a8a8;
+      opacity: 0.65;
       font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 0.03em;
@@ -166,9 +182,9 @@
       font-weight: 600;
     }
     .clock-segment { cursor: pointer; }
-    .clock-segment:hover { background: rgba(255, 255, 255, 0.06); }
+    .clock-segment:hover { background: rgba(128, 128, 128, 0.18); }
     .pomo-mode {
-      color: #a8a8a8;
+      opacity: 0.65;
       font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 0.03em;
@@ -182,7 +198,7 @@
     button {
       all: unset;
       cursor: pointer;
-      color: #e5e5e5;
+      color: inherit;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -191,8 +207,8 @@
       border-radius: 4px;
       font-size: 11px;
     }
-    button:hover { background: rgba(255, 255, 255, 0.12); }
-    .close-btn { color: #a8a8a8; }
+    button:hover { background: rgba(128, 128, 128, 0.22); }
+    .close-btn { opacity: 0.65; }
     .pause-icon {
       display: inline-flex;
       gap: 2.5px;
@@ -200,15 +216,22 @@
     .pause-icon span {
       width: 3px;
       height: 10px;
-      background: #e5e5e5;
+      background: currentColor;
       border-radius: 1px;
     }
+    .settings-segment {
+      cursor: pointer;
+      padding-left: 9px;
+      padding-right: 9px;
+    }
+    .settings-segment svg { display: block; }
 
     .popover {
       position: absolute;
       bottom: calc(100% + 6px);
       right: 0;
       background: #2f2f2f;
+      color: #e5e5e5;
       border: 1px solid #545454;
       border-radius: 8px;
       padding: 10px;
@@ -227,6 +250,29 @@
       display: block;
       margin-bottom: 3px;
     }
+    .color-input {
+      width: 100%;
+      height: 28px;
+      background: #1f1f1f;
+      border: 1px solid #545454;
+      border-radius: 4px;
+      padding: 2px;
+      cursor: pointer;
+    }
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .chip {
+      padding: 4px 7px;
+      border-radius: 4px;
+      border: 1px solid #545454;
+      cursor: pointer;
+      font-size: 11px;
+    }
+    .chip:hover { background: rgba(255, 255, 255, 0.1); }
+    .chip.selected { background: rgba(99, 102, 241, 0.35); border-color: #6366f1; font-weight: 600; }
     .tz-search {
       width: 100%;
       background: #1f1f1f;
@@ -265,9 +311,21 @@
   const bar = document.createElement("div");
   bar.className = "bar";
 
+  const SETTINGS_ICON_SVG = `
+    <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+      <line x1="3" y1="5" x2="17" y2="5" />
+      <circle cx="12" cy="5" r="2" fill="currentColor" stroke="none" />
+      <line x1="3" y1="10" x2="17" y2="10" />
+      <circle cx="7" cy="10" r="2" fill="currentColor" stroke="none" />
+      <line x1="3" y1="15" x2="17" y2="15" />
+      <circle cx="14" cy="15" r="2" fill="currentColor" stroke="none" />
+    </svg>
+  `;
+
   const clock1 = createClockSegment("tz1");
   const clock2 = createClockSegment("tz2");
   const langSegment = createLanguageSegment();
+  const settingsSegment = createSettingsSegment();
 
   const pomoSegment = document.createElement("div");
   pomoSegment.className = "segment";
@@ -287,7 +345,14 @@
   closeBtn.textContent = "✕";
   closeSegment.appendChild(closeBtn);
 
-  bar.append(clock1.segment, clock2.segment, langSegment.segment, pomoSegment, closeSegment);
+  bar.append(
+    clock1.segment,
+    clock2.segment,
+    langSegment.segment,
+    pomoSegment,
+    settingsSegment.segment,
+    closeSegment,
+  );
   shadow.append(style, bar);
 
   function createClockSegment(tzKey) {
@@ -403,6 +468,80 @@
     return { segment, label, popover, popLabel, renderOptions };
   }
 
+  function createSettingsSegment() {
+    const segment = document.createElement("div");
+    segment.className = "segment clock-segment settings-segment";
+    segment.innerHTML = SETTINGS_ICON_SVG;
+    segment.title = t("settingsLabel");
+
+    const popover = document.createElement("div");
+    popover.className = "popover";
+
+    const colorLabel = document.createElement("label");
+    const colorInput = document.createElement("input");
+    colorInput.type = "color";
+    colorInput.className = "color-input";
+    colorInput.addEventListener("input", () => {
+      chrome.storage.local.set({ barColor: colorInput.value });
+    });
+
+    const opacityLabel = document.createElement("label");
+    const opacityRow = document.createElement("div");
+    opacityRow.className = "chip-row";
+
+    const fontLabel = document.createElement("label");
+    const fontRow = document.createElement("div");
+    fontRow.className = "chip-row";
+
+    popover.append(colorLabel, colorInput, opacityLabel, opacityRow, fontLabel, fontRow);
+    segment.appendChild(popover);
+
+    function renderOpacityChips() {
+      opacityRow.innerHTML = "";
+      for (const level of OPACITY_LEVELS) {
+        const chip = document.createElement("div");
+        chip.className = "chip" + (level === state.barOpacity ? " selected" : "");
+        chip.textContent = `${level}%`;
+        chip.addEventListener("click", () => chrome.storage.local.set({ barOpacity: level }));
+        opacityRow.appendChild(chip);
+      }
+    }
+
+    function renderFontChips() {
+      fontRow.innerHTML = "";
+      for (const value of ["white", "black"]) {
+        const chip = document.createElement("div");
+        chip.className = "chip" + (value === state.fontColor ? " selected" : "");
+        chip.textContent = t(value === "white" ? "fontWhite" : "fontBlack");
+        chip.addEventListener("click", () => chrome.storage.local.set({ fontColor: value }));
+        fontRow.appendChild(chip);
+      }
+    }
+
+    segment.addEventListener("click", (e) => {
+      if (popover.contains(e.target)) return;
+      const wasOpen = popover.classList.contains("open");
+      closeAllPopovers();
+      if (!wasOpen) {
+        popover.classList.add("open");
+        colorInput.value = state.barColor;
+        renderOpacityChips();
+        renderFontChips();
+      }
+    });
+
+    return {
+      segment,
+      popover,
+      colorLabel,
+      opacityLabel,
+      fontLabel,
+      colorInput,
+      renderOpacityChips,
+      renderFontChips,
+    };
+  }
+
   function closeAllPopovers() {
     shadow.querySelectorAll(".popover.open").forEach((p) => p.classList.remove("open"));
   }
@@ -443,6 +582,19 @@
     return `${m}:${s}`;
   }
 
+  function hexToRgb(hex) {
+    const clean = hex.replace("#", "");
+    const value = parseInt(clean, 16);
+    return { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 };
+  }
+
+  function applyBarTheme() {
+    const { r, g, b } = hexToRgb(state.barColor || "#3c3c3c");
+    const alpha = (state.barOpacity ?? 100) / 100;
+    bar.style.background = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    bar.style.color = state.fontColor === "black" ? "#000000" : "#ffffff";
+  }
+
   function render() {
     host.style.display = state.barVisible ? "block" : "none";
 
@@ -458,6 +610,17 @@
 
     langSegment.label.textContent = state.lang === "pt-BR" ? "PT-BR" : "EN";
     langSegment.popLabel.textContent = t("languageLabel");
+
+    settingsSegment.segment.title = t("settingsLabel");
+    settingsSegment.colorLabel.textContent = t("barColorLabel");
+    settingsSegment.opacityLabel.textContent = t("transparencyLabel");
+    settingsSegment.fontLabel.textContent = t("textColorLabel");
+    if (settingsSegment.popover.classList.contains("open")) {
+      settingsSegment.colorInput.value = state.barColor;
+      settingsSegment.renderOpacityChips();
+      settingsSegment.renderFontChips();
+    }
+    applyBarTheme();
 
     const { pomodoro } = state;
     pomoMode.textContent = pomodoro.mode === "work" ? t("focus") : t("break");
