@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>Quick Tasks</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <h1>Quick Tasks</h1>
+    <span id="counter" class="counter">0</span>
+  </header>
+
+  <form id="task-form">
+    <input
+      id="task-input"
+      type="text"
+      placeholder="Adicionar tarefa..."
+      autocomplete="off"
+      maxlength="200"
+    />
+    <button type="submit" aria-label="Adicionar">+</button>
+  </form>
+
+  <ul id="task-list"></ul>
+
+  <p id="empty-state" class="empty-state">Nenhuma tarefa ainda. Adicione uma acima.</p>
+
+  <footer>
+    <button id="clear-done" type="button">Limpar concluídas</button>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>
