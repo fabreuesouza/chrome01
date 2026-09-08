@@ -6,6 +6,8 @@ no canto inferior direito de qualquer página, com:
 - **Dois relógios** configuráveis por fuso horário (clique no horário para trocar).
 - **Cronômetro Pomodoro** com ciclos de 25 min de foco / 5 min de pausa,
   sincronizado entre todas as abas abertas.
+- **Idioma** da interface configurável (English / Portuguese (Brazil)),
+  com **inglês como padrão**.
 
 A barra usa `position: fixed`, então permanece no canto inferior direito
 mesmo com o scroll da página.
@@ -44,3 +46,10 @@ salva automaticamente e vale para todas as abas.
 - Ao terminar um ciclo, a extensão dispara uma notificação do sistema e
   alterna automaticamente entre "Foco" e "Pausa" (o próximo ciclo fica
   pronto para iniciar, sem começar sozinho).
+
+## Idioma
+
+Clique no seletor de idioma (mostra "EN" ou "PT-BR") para escolher entre
+**English** (padrão) e **Portuguese (Brazil)**. A escolha é salva e afeta
+todos os textos da barra (rótulos, placeholders, notificações do Pomodoro)
+em todas as abas.

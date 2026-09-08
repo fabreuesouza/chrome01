@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Status Bar: Relógios & Pomodoro",
+  "name": "Status Bar: Clocks & Pomodoro",
   "version": "1.0.0",
-  "description": "Barra fixa no canto inferior direito com dois relógios de fuso horário e um cronômetro Pomodoro (25min foco / 5min pausa).",
+  "description": "Fixed bottom-right bar with two timezone clocks and a Pomodoro timer (25min focus / 5min break).",
   "action": {
     "default_icon": {
       "16": "icons/icon16.png",
@@ -10,7 +10,7 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     },
-    "default_title": "Mostrar/ocultar barra de status"
+    "default_title": "Show/hide status bar"
   },
   "icons": {
     "16": "icons/icon16.png",

@@ -68,8 +68,47 @@
 
   const WORK_MS = 25 * 60 * 1000;
 
+  const LANGUAGES = [
+    { code: "en", nameKey: "langEnglish" },
+    { code: "pt-BR", nameKey: "langPortugueseBR" },
+  ];
+
+  const TRANSLATIONS = {
+    en: {
+      timezoneLabel: "Timezone",
+      searchPlaceholder: "Search city or timezone...",
+      noResults: "No timezone found",
+      focus: "Focus",
+      break: "Break",
+      startPause: "Start/Pause",
+      reset: "Reset",
+      hideBar: "Hide bar",
+      languageLabel: "Language",
+      langEnglish: "English",
+      langPortugueseBR: "Portuguese (Brazil)",
+    },
+    "pt-BR": {
+      timezoneLabel: "Fuso horário",
+      searchPlaceholder: "Buscar cidade ou fuso...",
+      noResults: "Nenhum fuso encontrado",
+      focus: "Foco",
+      break: "Pausa",
+      startPause: "Iniciar/Pausar",
+      reset: "Reiniciar",
+      hideBar: "Ocultar barra",
+      languageLabel: "Idioma",
+      langEnglish: "Inglês",
+      langPortugueseBR: "Português (Brasil)",
+    },
+  };
+
+  function t(key) {
+    return TRANSLATIONS[state.lang]?.[key] ?? TRANSLATIONS.en[key];
+  }
+
   let state = {
     barVisible: true,
+    lang: "en",
     tz1: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
     tz2: "UTC",
     pomodoro: { mode: "work", running: false, endAt: null, remainingMs: WORK_MS },
@@ -228,6 +267,7 @@
 
   const clock1 = createClockSegment("tz1");
   const clock2 = createClockSegment("tz2");
+  const langSegment = createLanguageSegment();
 
   const pomoSegment = document.createElement("div");
   pomoSegment.className = "segment";
@@ -236,10 +276,8 @@
   const pomoTime = document.createElement("span");
   pomoTime.className = "pomo-time";
   const playPauseBtn = document.createElement("button");
-  playPauseBtn.title = "Iniciar/Pausar";
   const resetBtn = document.createElement("button");
   resetBtn.textContent = "⟲";
-  resetBtn.title = "Reiniciar";
   pomoSegment.append(pomoMode, pomoTime, playPauseBtn, resetBtn);
 
   const closeSegment = document.createElement("div");
@@ -247,10 +285,9 @@
   const closeBtn = document.createElement("button");
   closeBtn.className = "close-btn";
   closeBtn.textContent = "✕";
-  closeBtn.title = "Ocultar barra";
   closeSegment.appendChild(closeBtn);
 
-  bar.append(clock1.segment, clock2.segment, pomoSegment, closeSegment);
+  bar.append(clock1.segment, clock2.segment, langSegment.segment, pomoSegment, closeSegment);
   shadow.append(style, bar);
 
   function createClockSegment(tzKey) {
@@ -265,11 +302,9 @@
     const popover = document.createElement("div");
     popover.className = "popover";
     const popLabel = document.createElement("label");
-    popLabel.textContent = "Fuso horário";
     const searchInput = document.createElement("input");
     searchInput.type = "text";
     searchInput.className = "tz-search";
-    searchInput.placeholder = "Buscar cidade ou fuso...";
     searchInput.autocomplete = "off";
     const optionsList = document.createElement("div");
     optionsList.className = "tz-options";
@@ -282,7 +317,7 @@
       if (matches.length === 0) {
         const empty = document.createElement("div");
         empty.className = "tz-empty";
-        empty.textContent = "Nenhum fuso encontrado";
+        empty.textContent = t("noResults");
         optionsList.appendChild(empty);
         return;
       }
@@ -323,7 +358,49 @@
       }
     });
 
-    return { segment, label, time, popover, renderOptions };
+    return { segment, label, time, popover, popLabel, searchInput, renderOptions };
+  }
+
+  function createLanguageSegment() {
+    const segment = document.createElement("div");
+    segment.className = "segment clock-segment";
+    const label = document.createElement("span");
+    label.className = "clock-label";
+    segment.appendChild(label);
+
+    const popover = document.createElement("div");
+    popover.className = "popover";
+    const popLabel = document.createElement("label");
+    const optionsList = document.createElement("div");
+    optionsList.className = "tz-options";
+    popover.append(popLabel, optionsList);
+    segment.appendChild(popover);
+
+    function renderOptions() {
+      optionsList.innerHTML = "";
+      for (const { code, nameKey } of LANGUAGES) {
+        const item = document.createElement("div");
+        item.className = "tz-option" + (code === state.lang ? " selected" : "");
+        item.textContent = t(nameKey);
+        item.addEventListener("click", () => {
+          chrome.storage.local.set({ lang: code });
+          popover.classList.remove("open");
+        });
+        optionsList.appendChild(item);
+      }
+    }
+
+    segment.addEventListener("click", (e) => {
+      if (popover.contains(e.target)) return;
+      const wasOpen = popover.classList.contains("open");
+      closeAllPopovers();
+      if (!wasOpen) {
+        popover.classList.add("open");
+        renderOptions();
+      }
+    });
+
+    return { segment, label, popover, popLabel, renderOptions };
   }
 
   function closeAllPopovers() {
@@ -347,7 +424,7 @@
 
   function formatClock(tz) {
     try {
-      return new Intl.DateTimeFormat("pt-BR", {
+      return new Intl.DateTimeFormat(state.lang, {
         timeZone: tz,
         hour: "2-digit",
         minute: "2-digit",
@@ -371,12 +448,19 @@
 
     clock1.label.textContent = cityOf(state.tz1);
     clock1.time.textContent = formatClock(state.tz1);
+    clock1.popLabel.textContent = t("timezoneLabel");
+    clock1.searchInput.placeholder = t("searchPlaceholder");
 
     clock2.label.textContent = cityOf(state.tz2);
     clock2.time.textContent = formatClock(state.tz2);
+    clock2.popLabel.textContent = t("timezoneLabel");
+    clock2.searchInput.placeholder = t("searchPlaceholder");
+
+    langSegment.label.textContent = state.lang === "pt-BR" ? "PT-BR" : "EN";
+    langSegment.popLabel.textContent = t("languageLabel");
 
     const { pomodoro } = state;
-    pomoMode.textContent = pomodoro.mode === "work" ? "Foco" : "Pausa";
+    pomoMode.textContent = pomodoro.mode === "work" ? t("focus") : t("break");
     const remaining = pomodoro.running
       ? Math.max(0, (pomodoro.endAt ?? Date.now()) - Date.now())
       : pomodoro.remainingMs;
@@ -384,6 +468,9 @@
     playPauseBtn.innerHTML = pomodoro.running
       ? '<span class="pause-icon"><span></span><span></span></span>'
       : "▶";
+    playPauseBtn.title = t("startPause");
+    resetBtn.title = t("reset");
+    closeBtn.title = t("hideBar");
   }
 
   chrome.storage.local.get(null).then((data) => {

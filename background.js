@@ -2,8 +2,24 @@ const WORK_MS = 25 * 60 * 1000;
 const BREAK_MS = 5 * 60 * 1000;
 const ALARM_NAME = "pomodoro";
 
+const NOTIFICATIONS = {
+  en: {
+    breakTitle: "Break time ☕",
+    breakMessage: "You finished a focus cycle. Rest for 5 minutes.",
+    focusTitle: "Focus time 🎯",
+    focusMessage: "Break's over. Focus for 25 minutes.",
+  },
+  "pt-BR": {
+    breakTitle: "Hora da pausa ☕",
+    breakMessage: "Você completou um ciclo de foco. Descanse 5 minutos.",
+    focusTitle: "Hora de focar 🎯",
+    focusMessage: "A pausa acabou. Bora focar por 25 minutos.",
+  },
+};
+
 const DEFAULT_STATE = {
   barVisible: true,
+  lang: "en",
   tz1: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
   tz2: "UTC",
   pomodoro: {
@@ -18,6 +34,7 @@ async function getState() {
   const data = await chrome.storage.local.get(Object.keys(DEFAULT_STATE));
   return {
     barVisible: data.barVisible ?? DEFAULT_STATE.barVisible,
+    lang: data.lang ?? DEFAULT_STATE.lang,
     tz1: data.tz1 ?? DEFAULT_STATE.tz1,
     tz2: data.tz2 ?? DEFAULT_STATE.tz2,
     pomodoro: data.pomodoro ?? DEFAULT_STATE.pomodoro,
@@ -85,7 +102,7 @@ async function handleMessage(message) {
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== ALARM_NAME) return;
 
-  const { pomodoro } = await getState();
+  const { pomodoro, lang } = await getState();
   const nextMode = pomodoro.mode === "work" ? "break" : "work";
   const next = {
     mode: nextMode,
@@ -95,11 +112,9 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   };
   await chrome.storage.local.set({ pomodoro: next });
 
-  const title = nextMode === "break" ? "Hora da pausa ☕" : "Hora de focar 🎯";
-  const message =
-    nextMode === "break"
-      ? "Você completou um ciclo de foco. Descanse 5 minutos."
-      : "A pausa acabou. Bora focar por 25 minutos.";
+  const strings = NOTIFICATIONS[lang] ?? NOTIFICATIONS.en;
+  const title = nextMode === "break" ? strings.breakTitle : strings.focusTitle;
+  const message = nextMode === "break" ? strings.breakMessage : strings.focusMessage;
 
   chrome.notifications?.create({
     type: "basic",
