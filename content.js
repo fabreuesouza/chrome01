@@ -44,6 +44,28 @@
     return COMMON_TIMEZONES;
   })();
 
+  function cityOf(tz) {
+    const parts = tz.split("/");
+    return parts[parts.length - 1].replace(/_/g, " ");
+  }
+
+  function rankedMatches(query) {
+    const q = query.toLowerCase();
+    const scored = [];
+    for (const tz of timezoneOptions) {
+      const city = cityOf(tz).toLowerCase();
+      const full = tz.toLowerCase();
+      let score;
+      if (city.startsWith(q)) score = 0;
+      else if (city.includes(q)) score = 1;
+      else if (full.includes(q)) score = 2;
+      else continue;
+      scored.push({ tz, score });
+    }
+    scored.sort((a, b) => a.score - b.score || a.tz.localeCompare(b.tz));
+    return scored.map((s) => s.tz);
+  }
+
   const WORK_MS = 25 * 60 * 1000;
 
   let state = {
@@ -166,14 +188,38 @@
       display: block;
       margin-bottom: 3px;
     }
-    .popover select {
+    .tz-search {
       width: 100%;
       background: #1f1f1f;
       color: #e5e5e5;
       border: 1px solid #545454;
       border-radius: 4px;
-      padding: 4px;
+      padding: 5px 6px;
       font-size: 12px;
+    }
+    .tz-search:focus { outline: 1px solid #8b8b8b; }
+    .tz-options {
+      max-height: 160px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .tz-option {
+      padding: 5px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .tz-option:hover { background: rgba(255, 255, 255, 0.1); }
+    .tz-option.selected { background: rgba(99, 102, 241, 0.35); font-weight: 600; }
+    .tz-empty {
+      padding: 6px;
+      color: #888;
+      font-size: 11px;
+      text-align: center;
     }
   `;
 
@@ -220,27 +266,64 @@
     popover.className = "popover";
     const popLabel = document.createElement("label");
     popLabel.textContent = "Fuso horário";
-    const select = document.createElement("select");
-    for (const tz of timezoneOptions) {
-      const opt = document.createElement("option");
-      opt.value = tz;
-      opt.textContent = tz.replace(/_/g, " ");
-      select.appendChild(opt);
+    const searchInput = document.createElement("input");
+    searchInput.type = "text";
+    searchInput.className = "tz-search";
+    searchInput.placeholder = "Buscar cidade ou fuso...";
+    searchInput.autocomplete = "off";
+    const optionsList = document.createElement("div");
+    optionsList.className = "tz-options";
+
+    function renderOptions() {
+      const q = searchInput.value.trim().toLowerCase();
+      const matches = (q ? rankedMatches(q) : timezoneOptions).slice(0, 60);
+
+      optionsList.innerHTML = "";
+      if (matches.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "tz-empty";
+        empty.textContent = "Nenhum fuso encontrado";
+        optionsList.appendChild(empty);
+        return;
+      }
+      for (const tz of matches) {
+        const item = document.createElement("div");
+        item.className = "tz-option" + (tz === state[tzKey] ? " selected" : "");
+        item.textContent = tz.replace(/_/g, " ");
+        item.addEventListener("click", () => {
+          chrome.storage.local.set({ [tzKey]: tz });
+          popover.classList.remove("open");
+        });
+        optionsList.appendChild(item);
+      }
     }
-    select.addEventListener("change", () => {
-      chrome.storage.local.set({ [tzKey]: select.value });
-      popover.classList.remove("open");
+
+    searchInput.addEventListener("input", renderOptions);
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        popover.classList.remove("open");
+      } else if (e.key === "Enter") {
+        const first = optionsList.querySelector(".tz-option");
+        first?.click();
+      }
     });
-    popover.appendChild(select);
+
+    popover.append(popLabel, searchInput, optionsList);
     segment.appendChild(popover);
 
     segment.addEventListener("click", (e) => {
-      if (e.target === select) return;
+      if (popover.contains(e.target)) return;
+      const wasOpen = popover.classList.contains("open");
       closeAllPopovers();
-      popover.classList.toggle("open");
+      if (!wasOpen) {
+        popover.classList.add("open");
+        searchInput.value = "";
+        renderOptions();
+        searchInput.focus();
+      }
     });
 
-    return { segment, label, time, select, popover };
+    return { segment, label, time, popover, renderOptions };
   }
 
   function closeAllPopovers() {
@@ -276,11 +359,6 @@
     }
   }
 
-  function shortLabel(tz) {
-    const parts = tz.split("/");
-    return (parts[parts.length - 1] || tz).replace(/_/g, " ");
-  }
-
   function formatDuration(ms) {
     const totalSeconds = Math.max(0, Math.round(ms / 1000));
     const m = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
@@ -291,13 +369,11 @@
   function render() {
     host.style.display = state.barVisible ? "block" : "none";
 
-    clock1.label.textContent = shortLabel(state.tz1);
+    clock1.label.textContent = cityOf(state.tz1);
     clock1.time.textContent = formatClock(state.tz1);
-    clock1.select.value = state.tz1;
 
-    clock2.label.textContent = shortLabel(state.tz2);
+    clock2.label.textContent = cityOf(state.tz2);
     clock2.time.textContent = formatClock(state.tz2);
-    clock2.select.value = state.tz2;
 
     const { pomodoro } = state;
     pomoMode.textContent = pomodoro.mode === "work" ? "Foco" : "Pausa";
