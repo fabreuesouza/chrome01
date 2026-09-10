@@ -36,7 +36,7 @@
     try {
       if (typeof Intl.supportedValuesOf === "function") {
         const values = Intl.supportedValuesOf("timeZone");
-        if (values?.length) return values;
+        if (values?.length) return values.filter((tz) => tz.trim() && tz.includes("/"));
       }
     } catch {
       /* fall through to curated list */
@@ -49,16 +49,63 @@
     return parts[parts.length - 1].replace(/_/g, " ");
   }
 
+  function regionOf(tz) {
+    return tz.split("/")[0];
+  }
+
+  // Strip accents so "América"/"Europa" (pt-BR) match the ASCII-only IANA ids.
+  function normalize(str) {
+    return str
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+  }
+
+  // Continent names, in English and Portuguese (with/without accents), mapped
+  // to the IANA region prefixes they should surface.
+  const CONTINENT_ALIASES = {
+    africa: ["Africa"],
+    america: ["America"],
+    europe: ["Europe"],
+    europa: ["Europe"],
+    asia: ["Asia"],
+    oceania: ["Australia", "Pacific"],
+    australia: ["Australia"],
+    antarctica: ["Antarctica"],
+    antartida: ["Antarctica"],
+    antartica: ["Antarctica"],
+    atlantic: ["Atlantic"],
+    atlantico: ["Atlantic"],
+    indian: ["Indian"],
+    indico: ["Indian"],
+    pacific: ["Pacific"],
+    pacifico: ["Pacific"],
+  };
+
+  function matchingContinents(query) {
+    const regions = new Set();
+    for (const [alias, mapped] of Object.entries(CONTINENT_ALIASES)) {
+      if (alias.startsWith(query) || query.startsWith(alias)) {
+        mapped.forEach((r) => regions.add(r));
+      }
+    }
+    return regions;
+  }
+
   function rankedMatches(query) {
-    const q = query.toLowerCase();
+    const q = normalize(query.trim());
+    if (!q) return timezoneOptions;
+
+    const continents = matchingContinents(q);
     const scored = [];
     for (const tz of timezoneOptions) {
-      const city = cityOf(tz).toLowerCase();
-      const full = tz.toLowerCase();
+      const city = normalize(cityOf(tz));
+      const full = normalize(tz);
       let score;
       if (city.startsWith(q)) score = 0;
-      else if (city.includes(q)) score = 1;
-      else if (full.includes(q)) score = 2;
+      else if (continents.has(regionOf(tz))) score = 1;
+      else if (city.includes(q)) score = 2;
+      else if (full.includes(q)) score = 3;
       else continue;
       scored.push({ tz, score });
     }
@@ -77,7 +124,7 @@
   const TRANSLATIONS = {
     en: {
       timezoneLabel: "Timezone",
-      searchPlaceholder: "Search city or timezone...",
+      searchPlaceholder: "Search city, timezone or continent...",
       noResults: "No timezone found",
       focus: "Focus",
       break: "Break",
@@ -96,7 +143,7 @@
     },
     "pt-BR": {
       timezoneLabel: "Fuso horário",
-      searchPlaceholder: "Buscar cidade ou fuso...",
+      searchPlaceholder: "Buscar cidade, fuso ou continente...",
       noResults: "Nenhum fuso encontrado",
       focus: "Foco",
       break: "Pausa",
@@ -374,9 +421,18 @@
     const optionsList = document.createElement("div");
     optionsList.className = "tz-options";
 
+    function defaultList() {
+      // Curated shortlist instead of dumping ~400 raw IANA ids on open; make
+      // sure the currently selected zone is visible even if not on the list.
+      const current = state[tzKey];
+      return COMMON_TIMEZONES.includes(current) ? COMMON_TIMEZONES : [current, ...COMMON_TIMEZONES];
+    }
+
     function renderOptions() {
-      const q = searchInput.value.trim().toLowerCase();
-      const matches = (q ? rankedMatches(q) : timezoneOptions).slice(0, 60);
+      const q = searchInput.value.trim();
+      const matches = (q ? rankedMatches(q) : defaultList())
+        .filter((tz) => tz.replace(/_/g, " ").trim().length > 0)
+        .slice(0, 60);
 
       optionsList.innerHTML = "";
       if (matches.length === 0) {
