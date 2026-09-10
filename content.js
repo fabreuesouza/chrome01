@@ -282,7 +282,7 @@
       border: 1px solid #545454;
       border-radius: 8px;
       padding: 10px;
-      width: 210px;
+      width: 260px;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
       display: none;
       flex-direction: column;
@@ -341,9 +341,10 @@
       padding: 5px 6px;
       border-radius: 4px;
       cursor: pointer;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      white-space: normal;
+      word-break: break-word;
+      line-height: 1.3;
+      flex-shrink: 0;
     }
     .tz-option:hover { background: rgba(255, 255, 255, 0.1); }
     .tz-option.selected { background: rgba(99, 102, 241, 0.35); font-weight: 600; }
@@ -352,6 +353,7 @@
       color: #888;
       font-size: 11px;
       text-align: center;
+      flex-shrink: 0;
     }
   `;
 
